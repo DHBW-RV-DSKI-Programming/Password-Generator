@@ -1,10 +1,6 @@
 import java.util.*;
 
 class PasswordGenerator {
-    private static final String LOWERCASE = "abcdefghijklmnopqrstuvwxyz";
-    private static final String UPPERCASE = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String DIGITS = "0123456789";
-    private static final String SPECIALS = "!@#$%^&*";
 
     void start() {
         Scanner scanner = new Scanner(System.in);
@@ -12,15 +8,23 @@ class PasswordGenerator {
 
         while (true) {
             int length = getPasswordLength(scanner);
-            boolean includeLower = getUserChoice(scanner, "Kleinbuchstaben (a-z)");
-            boolean includeUpper = getUserChoice(scanner, "Großbuchstaben (A-Z)");
-            boolean includeDigits = getUserChoice(scanner, "Zahlen (0-9)");
-            boolean includeSpecials = getUserChoice(scanner, "Sonderzeichen (!@#$%^&*)");
-            boolean noRepeats = getUserChoice(scanner, "Keine wiederholten Zeichen");
-            boolean noSequentialDigits = getUserChoice(scanner, "Keine aufeinanderfolgenden Zahlen");
+            UserSelection userSelection = new UserSelection();
 
-            String password = generatePassword(length, includeLower, includeUpper, includeDigits, includeSpecials, noRepeats, noSequentialDigits);
-            System.out.println("\nGeneriertes Passwort: " + password + "\n");
+            do {
+                userSelection.setLowerSelected(getUserChoice(scanner, "Kleinbuchstaben (a-z)"));
+                userSelection.setUpperSelected(getUserChoice(scanner, "Großbuchstaben (A-Z)"));
+                userSelection.setDigitsSelected(getUserChoice(scanner, "Zahlen (0-9)"));
+                userSelection.setSpecialsSelected(getUserChoice(scanner, "Sonderzeichen (!@#$%^&*)"));
+                userSelection.setNoRepeatsSelected(getUserChoice(scanner, "Keine wiederholten Zeichen"));
+                userSelection.setNoSequentialDigitsSelected(getUserChoice(scanner, "Keine aufeinanderfolgenden Zahlen"));
+
+                if (!userSelection.isAnySelected()) {
+                    System.out.println("Es muss mindestens eine Zeichenart ausgewählt werden!");
+                }
+            } while (!userSelection.isAnySelected());
+
+            String password = generatePassword(length, userSelection);
+            System.out.println("Generiertes Passwort: " + password);
 
             System.out.print("Möchtest du ein weiteres Passwort generieren? (j/n): ");
             if (!scanner.next().equalsIgnoreCase("j")) {
@@ -49,34 +53,63 @@ class PasswordGenerator {
         return scanner.next().equalsIgnoreCase("j");
     }
 
-    private String generatePassword(int length, boolean lower, boolean upper, boolean digits, boolean specials, boolean noRepeats, boolean noSequentialDigits) {
-        String charPool = "";
-        if (lower) charPool += LOWERCASE;
-        if (upper) charPool += UPPERCASE;
-        if (digits) charPool += DIGITS;
-        if (specials) charPool += SPECIALS;
-
-        if (charPool.isEmpty()) {
-            return "Fehler: Keine Zeichenarten ausgewählt!";
-        }
+    private String generatePassword(int length, UserSelection userSelection) {
+        ArrayList<Integer> charPool = initCharPool(userSelection);
 
         Random random = new Random();
-        StringBuilder password = new StringBuilder();
-        char lastChar = '\0';
+        String password = "";
+        int lastCharValue = -1; // store previous character code
 
         while (password.length() < length) {
-            char nextChar = charPool.charAt(random.nextInt(charPool.length()));
+            int nextCharValue = charPool.get(random.nextInt(charPool.size()));
+            char nextChar = (char) nextCharValue;
+            char lastChar = (char) lastCharValue;
 
-            if (noRepeats && !password.isEmpty() && password.indexOf(String.valueOf(nextChar)) != -1) {
+            // Check no repeated characters
+            if (userSelection.isNoRepeatsSelected() && password.contains(String.valueOf(nextChar))) {
                 continue;
             }
-            if (noSequentialDigits && Character.isDigit(nextChar) && Character.isDigit(lastChar) && Math.abs(nextChar - lastChar) == 1) {
+            // Check for no sequential digits
+            if (userSelection.isNoSequentialDigitsSelected() && Character.isDigit(nextChar) && Character.isDigit(lastChar) && lastCharValue != -1
+                    && Math.abs(nextCharValue - lastCharValue) == 1) {
                 continue;
             }
-            password.append(nextChar);
-            lastChar = nextChar;
+            password += nextChar;
+            lastCharValue = nextCharValue;
         }
 
-        return password.toString();
+        return password;
     }
+
+    private ArrayList<Integer> initCharPool(UserSelection userSelection) {
+        ArrayList<Integer> charPool = new ArrayList<>();
+
+        if (userSelection.isLowerSelected() == true) {
+            // a to z
+            for (int code = 'a'; code <= (int) 'z'; code++) {
+                charPool.add(code);
+            }
+        }
+        if (userSelection.isUpperSelected() == true) {
+            // A to Z
+            for (int code = 'A'; code <= (int) 'Z'; code++) {
+                charPool.add(code);
+            }
+        }
+        if (userSelection.isDigitsSelected() == true) {
+            // 0 to 9
+            for (int code = '0'; code <= (int) '9'; code++) {
+                charPool.add(code);
+            }
+        }
+        if (userSelection.isSpecialsSelected() == true) {
+            // Special characters: !@#$%^&*
+            int[] specialCodes = {(int) '!', (int) '@', (int) '#', (int) '$', (int) '%', (int) '^', (int) '&', (int) '*'};
+            for (int code : specialCodes) {
+                charPool.add(code);
+            }
+        }
+        return charPool;
+    }
+
 }
