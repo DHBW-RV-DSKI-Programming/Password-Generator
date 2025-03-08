@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -25,7 +24,15 @@ class PasswordGenerator {
                 }
             } while (!userSelection.isAnySelected());
 
-            String password = generatePassword(length, userSelection);
+            CharPool charPool = new CharPool(userSelection);
+            if (userSelection.isNoRepeatsSelected() && charPool.getCharPoolSize() < length) {
+                System.out.println("Die gewählten Zeichen reichen nicht aus, um ein Passwort der gewünschten Länge zu generieren.");
+                continue;
+            }
+
+            PasswordValidator validator = new PasswordValidator(userSelection);
+
+            String password = generatePassword(length, charPool, validator);
             System.out.println("Generiertes Passwort: " + password);
 
             System.out.print("Möchtest du ein weiteres Passwort generieren? (j/n): ");
@@ -55,63 +62,24 @@ class PasswordGenerator {
         return scanner.next().equalsIgnoreCase("j");
     }
 
-    private String generatePassword(int length, UserSelection userSelection) {
-        ArrayList<Integer> charPool = initCharPool(userSelection);
-
+    private String generatePassword(int length, CharPool charPool, PasswordValidator validator) {
         Random random = new Random();
         String password = "";
         int lastCharValue = -1; // store previous character code
 
         while (password.length() < length) {
-            int nextCharValue = charPool.get(random.nextInt(charPool.size()));
+            int nextCharValue = charPool.getRandomChar(random);
             char nextChar = (char) nextCharValue;
-            char lastChar = (char) lastCharValue;
 
-            // Check no repeated characters
-            if (userSelection.isNoRepeatsSelected() && password.contains(String.valueOf(nextChar))) {
+            if (!validator.isValid(password, nextChar, lastCharValue)) {
                 continue;
             }
-            // Check for no sequential digits
-            if (userSelection.isNoSequentialDigitsSelected() && Character.isDigit(nextChar) && Character.isDigit(lastChar) && lastCharValue != -1
-                    && Math.abs(nextCharValue - lastCharValue) == 1) {
-                continue;
-            }
+
             password += nextChar;
             lastCharValue = nextCharValue;
         }
 
         return password;
-    }
-
-    private ArrayList<Integer> initCharPool(UserSelection userSelection) {
-        ArrayList<Integer> charPool = new ArrayList<>();
-
-        if (userSelection.isLowerSelected() == true) {
-            // a to z
-            for (int code = 'a'; code <= (int) 'z'; code++) {
-                charPool.add(code);
-            }
-        }
-        if (userSelection.isUpperSelected() == true) {
-            // A to Z
-            for (int code = 'A'; code <= (int) 'Z'; code++) {
-                charPool.add(code);
-            }
-        }
-        if (userSelection.isDigitsSelected() == true) {
-            // 0 to 9
-            for (int code = '0'; code <= (int) '9'; code++) {
-                charPool.add(code);
-            }
-        }
-        if (userSelection.isSpecialsSelected() == true) {
-            // Special characters: !@#$%^&*
-            int[] specialCodes = {(int) '!', (int) '@', (int) '#', (int) '$', (int) '%', (int) '^', (int) '&', (int) '*'};
-            for (int code : specialCodes) {
-                charPool.add(code);
-            }
-        }
-        return charPool;
     }
 
 }
